@@ -1,0 +1,118 @@
+<html>
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=Generator content="Microsoft Word 15 (filtered)">
+<style>
+<!--
+ /* Font Definitions */
+ @font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:Aptos;
+	panose-1:2 11 0 4 2 2 2 2 2 4;}
+ /* Style Definitions */
+ p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin-top:0in;
+	margin-right:0in;
+	margin-bottom:8.0pt;
+	margin-left:0in;
+	line-height:115%;
+	font-size:12.0pt;
+	font-family:"Aptos",sans-serif;}
+a:link, span.MsoHyperlink
+	{color:#467886;
+	text-decoration:underline;}
+.MsoPapDefault
+	{margin-bottom:8.0pt;
+	line-height:115%;}
+@page WordSection1
+	{size:8.5in 11.0in;
+	margin:1.0in 1.0in 1.0in 1.0in;}
+div.WordSection1
+	{page:WordSection1;}
+-->
+</style>
+
+</head>
+
+<body lang=EN-US link="#467886" vlink="#96607D" style='word-wrap:break-word'>
+
+<div class=WordSection1>
+
+<p class=MsoNormal>I had a problem.  I my new Bambu Labs H3C, I wanted to print
+both of these models at the same time.</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal><a
+href="https://makerworld.com/en/models/3517627-the-color-factory-full-spectrum#profileId-4081776">The
+Color Factory - Full Spectrum - Free 3D Print Model - MakerWorld</a></p>
+
+<p class=MsoNormal><img border=0 width=505 height=495
+src="Why_I_Made_3mf_Merge_files/image001.png"></p>
+
+<p class=MsoNormal><a
+href="https://makerworld.com/en/models/3577208-color-mixing-tester-punk-hedgehog#profileId-4095635">Color
+Mixing Tester - Punk Hedgehog - Free 3D Print Model - MakerWorld</a></p>
+
+<p class=MsoNormal><img border=0 width=299 height=288
+src="Why_I_Made_3mf_Merge_files/image002.png"></p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>Because printing them at the same time would save 4 hours of
+print time and 30 grams of filament. (I scaled the factor down to the same size
+as the hedgehog.)</p>
+
+<p class=MsoNormal>The trouble was, any time I tried to combine them in Bambu
+Studio, the colors of one or both would get messed up.</p>
+
+<p class=MsoNormal><img border=0 width=546 height=324
+src="Why_I_Made_3mf_Merge_files/image003.png"></p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>I thought I could correct the Filaments into the same CMYKW
+order before merging, but to do that I had to manually correct all of the Mixed
+Filaments</p>
+
+<p class=MsoNormal><img border=0 width=481 height=299
+src="Why_I_Made_3mf_Merge_files/image004.png"></p>
+
+<p class=MsoNormal><img border=0 width=471 height=290
+src="Why_I_Made_3mf_Merge_files/image005.png"></p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>Even after correcting both into CMYKW order and resolving each
+set of Mixed Filaments, the merging didn’t go well.</p>
+
+<p class=MsoNormal><img border=0 width=624 height=212
+src="Why_I_Made_3mf_Merge_files/image006.jpg"></p>
+
+<p class=MsoNormal>With the help of Github Copilot, I created the merge_3mf.py python
+script to read the color indexes in each file and keep them from conflicting
+into a new output file.</p>
+
+<p class=MsoNormal>So far, I’ve only tested it on these two models. Use at your
+own risk.</p>
+
+<p class=MsoNormal><img border=0 width=624 height=192 id="Picture 1"
+src="Why_I_Made_3mf_Merge_files/image007.jpg"></p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>See the readme.md file for more information and
+instructions.</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+</div>
+
+</body>
+
+</html>
