@@ -117,11 +117,3 @@ python -B -m unittest test_merge_3mf -v
 Studio, confirm both models and their colors, fix overlap, inspect mixed
 recipes, review A's global settings and purge volumes, then slice and inspect
 the preview before printing.
-
-## Previous CMYKW-specific workflow
-
-The earlier successful `ColorFactory_And_Hedgehog_CMYK.3mf` is unchanged.
-Its specialized generator is preserved as `merge_cmyk_3mf.py`. That script
-uses the corrected Hedgehog, corrected/broken ColorFactory, and original
-ColorFactory reference to repair recipes and standardize the six base slots.
-It is separate from the generic concatenation workflow above.
