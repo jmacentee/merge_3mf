@@ -117,3 +117,9 @@ python -B -m unittest test_merge_3mf -v
 Studio, confirm both models and their colors, fix overlap, inspect mixed
 recipes, review A's global settings and purge volumes, then slice and inspect
 the preview before printing.
+
+# WARNING
+- Bambu Slicer is not smart enough (yet, November 2026) to treat two project filaments that are both mapped to the same AMS spool as 
+a single filament.  I combined two projects and got two each of CMYK and 1st slice was 17h19m, 2477 filament changes, 121g purge tower.
+Manually merging the duplicate filaments one-by-one and then correcting the virtual mixed filaments reduced the same project with no other
+changes to 14h35m, 1497 filament changes, 72g purge tower. 
