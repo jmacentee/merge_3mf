@@ -17,7 +17,7 @@ import zipfile
 from functools import lru_cache
 from pathlib import Path
 
-from filament_report import format_filament_report
+from filament_report import SLOT_KEYS, format_filament_report
 
 
 CORE = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
@@ -31,30 +31,6 @@ SELECTORS = {
     "support_filament", "support_interface_filament",
 }
 PAINT = re.compile(rb'\bpaint_color=["\']([0-9A-Fa-f]+)["\']')
-# Explicit setting names avoid mistaking a printer array for a filament array
-# when, for example, a project contains just one or two filaments.
-SLOT_KEYS = set("""
-activate_air_filtration additional_cooling_fan_speed additional_fan_full_speed_layer
-chamber_temperatures circle_compensation_speed close_additional_fan_first_x_layers
-close_fan_the_first_x_layers close_optional_fan_first_x_layers complete_print_exhaust_fan_speed
-cool_plate_temp cool_plate_temp_initial_layer cooling_perimeter_transition_distance
-cooling_slowdown_logic counter_coef_1 counter_coef_2 counter_coef_3 counter_limit_max
-counter_limit_min default_filament_colour diameter_limit during_print_exhaust_fan_speed
-enable_overhang_bridge_fan enable_pressure_advance eng_plate_temp eng_plate_temp_initial_layer
-fan_cooling_layer_time fan_max_speed fan_min_speed fins_extrude_safe_temp
-first_x_layer_fan_speed first_x_layer_optional_fan_speed first_x_layer_part_fan_speed
-full_fan_speed_layer hole_coef_1 hole_coef_2 hole_coef_3 hole_limit_max hole_limit_min
-hot_plate_temp hot_plate_temp_initial_layer impact_strength_z ironing_fan_speed
-long_retractions_when_ec min_temperature_when_ec no_slow_down_for_cooling_on_outwalls
-nozzle_temperature nozzle_temperature_initial_layer nozzle_temperature_range_high
-nozzle_temperature_range_low optional_cooling_fan_speed optional_fan_full_speed_layer
-overhang_fan_speed overhang_fan_threshold overhang_threshold_participating_cooling
-override_process_overhang_speed pre_start_fan_time pressure_advance reduce_fan_stop_start_freq
-required_nozzle_HRC retraction_distances_when_ec slow_down_for_layer_cooling
-slow_down_layer_time slow_down_min_speed supertack_plate_temp supertack_plate_temp_initial_layer
-temperature_vitrification textured_plate_temp textured_plate_temp_initial_layer
-volumetric_speed_coefficients flush_volumes_vector
-""".split())
 PRINTER_KEYS = (
     "printer_model", "printer_variant", "printer_technology", "printer_structure",
     "nozzle_diameter", "printable_area", "printable_height", "extruder_offset",
@@ -522,7 +498,6 @@ def merge(input_a, input_b, output):
     require(not output.exists(), "Output already exists; choose a new filename")
     projects = [Project(input_a), Project(input_b)]
     settings, maps, order = merge_palettes(*(p.settings for p in projects))
-    report = format_filament_report(settings, output)
     next_id = 1
     for source, project in enumerate(projects):
         next_id = project.prepare(source, next_id, projects[0].files)
@@ -550,6 +525,7 @@ def merge(input_a, input_b, output):
     files[ROOT_MODEL] = xml_bytes(root_a)
     files[SETTINGS] = json.dumps(settings, ensure_ascii=False, indent=2).encode("utf-8")
     files[MODEL_SETTINGS] = combine_metadata(projects, maps)
+    report = format_filament_report(settings, output, ET.fromstring(files[MODEL_SETTINGS]))
     cuts = ET.Element("objects")
     object_offset = 0
     for project in projects:

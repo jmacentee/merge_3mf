@@ -56,6 +56,8 @@ ending in `_merged_colors`. Review the suggestion before running it: identical
 colors do not guarantee matching materials, profiles, or physical spools.
 Mixed slots are not included in suggested sets; unrecognized color values are
 reported and excluded. No file is changed by the suggestion itself.
+The report also lists identical mixed-filament groups and suggests
+`merge_3mf_mixed.py` when it finds any.
 
 ## Merge duplicate base filaments
 
@@ -93,6 +95,30 @@ mixed filaments remain separate. The script prints the original-to-new slot
 mapping, discards cached slice data, and will not overwrite an existing file.
 Review the retained settings, mixed recipes and purging volumes in Bambu Studio
 and inspect the slice preview before printing.
+
+## Merge identical mixed filaments
+
+Run the following after merging base colors, or on any compatible project:
+
+```powershell
+python -B .\merge_3mf_mixed.py .\FOM_All3_merged_colors.3mf `
+  .\FOM_All3_merged_colors_merged_mixed.3mf
+```
+
+With only an input filename, the script displays the filament report without
+writing a file. With an output filename, it merges all matching groups and
+prints the original-to-new slot mapping. It retains the first slot in each
+group, remaps paint and filament references, and discards cached slice data.
+It never overwrites an input or existing output.
+
+Mixed slots match only when their **ordered ingredient slots**, numeric ratios,
+per-filament settings (including gradient settings), preset metadata, and plate
+maps match. Purge transitions to other slots must match too; transitions between
+the duplicate slots themselves do not need to match. A match does not rely
+only on the displayed color. Potential duplicates with different settings are
+left separate. Keep `merge_3mf.py`, `merge_3mf_colors.py`, and
+`filament_report.py` in the same folder as this script. Review recipes,
+settings and purge volumes in Bambu Studio before printing.
 
 For the sample, the output has **9 base slots and 25 mixed slots**:
 
@@ -165,7 +191,7 @@ object IDs, and model/part/paint reference resolution.
 Run the focused Python tests with:
 
 ```powershell
-python -B -m unittest test_merge_3mf test_merge_3mf_colors -v
+python -B -m unittest test_merge_3mf test_merge_3mf_colors test_merge_3mf_mixed -v
 ```
 
 **You do all slicer and printing tests.** Open the output as a project in Bambu

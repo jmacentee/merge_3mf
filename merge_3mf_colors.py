@@ -77,6 +77,16 @@ def merge_palette(settings, groups):
     for new, old in enumerate(order, 1):
         mapping[old] = new
 
+    result, setting_warnings = select_settings(settings, order, mapping, groups)
+    result["filament_is_mixed"] = ["0"] * len(base_order) + ["1"] * len(mixed_order)
+    result["filament_mixed_components"] = [""] * len(base_order) + [recipes[slot] for slot in mixed_order]
+    result["filament_mixed_sublayer_ratios"] = [""] * len(base_order) + [ratios[slot] for slot in mixed_order]
+    palette(result)
+    return result, tuple(mapping), order, warnings + setting_warnings
+
+
+def select_settings(settings, order, mapping, groups):
+    count = len(settings["filament_colour"])
     result = copy.deepcopy(settings)
     keys = SLOT_KEYS | {k for k, v in settings.items() if k.startswith("filament_") and isinstance(v, list)}
     differences = {tuple(group): set() for group in groups}
@@ -101,9 +111,6 @@ def merge_palette(settings, groups):
         for new, old in enumerate(order, 1):
             result[key].extend([str(new)] * width if key == "filament_self_index" else chunk(old))
 
-    result["filament_is_mixed"] = ["0"] * len(base_order) + ["1"] * len(mixed_order)
-    result["filament_mixed_components"] = [""] * len(base_order) + [recipes[slot] for slot in mixed_order]
-    result["filament_mixed_sublayer_ratios"] = [""] * len(base_order) + [ratios[slot] for slot in mixed_order]
     for key in SELECTORS:
         if key in result:
             result[key] = selector(result[key], mapping, key)
@@ -128,12 +135,12 @@ def merge_palette(settings, groups):
         matrix = settings["flush_volumes_matrix"]
         require(isinstance(matrix, list) and len(matrix) == count * count, "Invalid purge-volume matrix")
         result["flush_volumes_matrix"] = [matrix[(a - 1) * count + b - 1] for a in order for b in order]
+    warnings = []
     for group, keys in differences.items():
         if keys:
             warnings.append("Slots %s differ in %s; retained settings from slot %d." %
                             (",".join(str(s) for s in group), ", ".join(sorted(keys)), group[0]))
-    palette(result)
-    return result, tuple(mapping), order, warnings
+    return result, warnings
 
 
 def rewrite_metadata(project, mapping, order, groups):
@@ -199,6 +206,7 @@ def write_project(project, output, settings, mapping, order, groups):
             remap_paint(match.group(1).decode("ascii").upper(), tuple(range(len(order) + 1)))
     files[SETTINGS] = json.dumps(settings, ensure_ascii=False, indent=2).encode("utf-8")
     files[MODEL_SETTINGS] = rewrite_metadata(project, mapping, order, groups)
+    report = format_filament_report(settings, output, project.metadata)
     for name in files:
         if re.fullmatch(r"Metadata/(process_settings|print_setting)_[^/]+\.config", name):
             preset = json.loads(files[name].decode("utf-8-sig"))
@@ -231,6 +239,7 @@ def write_project(project, output, settings, mapping, order, groups):
     finally:
         if temp_path.exists():
             temp_path.unlink()
+    return report
 
 
 def main():
@@ -243,8 +252,9 @@ def main():
         if args.sets is None:
             with zipfile.ZipFile(args.input) as archive:
                 settings = json.loads(archive.read(SETTINGS).decode("utf-8-sig"))
+                metadata = ET.fromstring(archive.read(MODEL_SETTINGS))
             palette(settings)
-            print(format_filament_report(settings, args.input))
+            print(format_filament_report(settings, args.input, metadata))
             return
         require(args.output.resolve() != args.input.resolve(), "Output must not overwrite the input")
         require(not args.output.exists(), "Output already exists; choose a new filename")
@@ -252,8 +262,7 @@ def main():
         bases, _ = palette(project.settings)
         groups = parse_sets(args.sets, {i + 1 for i in bases})
         settings, mapping, order, warnings = merge_palette(project.settings, groups)
-        report = format_filament_report(settings, args.output)
-        write_project(project, args.output, settings, mapping, order, groups)
+        report = write_project(project, args.output, settings, mapping, order, groups)
         for warning in warnings:
             print("Warning: " + warning, file=sys.stderr)
         print("Created %s" % args.output)
