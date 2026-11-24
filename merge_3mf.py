@@ -17,6 +17,8 @@ import zipfile
 from functools import lru_cache
 from pathlib import Path
 
+from filament_report import format_filament_report
+
 
 CORE = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
 PROD = "http://schemas.microsoft.com/3dmanufacturing/production/2015/06"
@@ -515,6 +517,7 @@ def merge(input_a, input_b, output):
     require(not output.exists(), "Output already exists; choose a new filename")
     projects = [Project(input_a), Project(input_b)]
     settings, maps, order = merge_palettes(*(p.settings for p in projects))
+    report = format_filament_report(settings)
     next_id = 1
     for source, project in enumerate(projects):
         next_id = project.prepare(source, next_id, projects[0].files)
@@ -596,6 +599,9 @@ def merge(input_a, input_b, output):
         flags.count("0"), flags.count("1")))
     print("Original transforms retained. A's global settings used; review overlap and purging before printing.")
     print("New cross-project purge transitions use 280; recalculate purging volumes in Bambu Studio.")
+    print(report)
+    print("Consider using merge_3mf_colors.py to merge colors for more efficient printing.")
+    print("Note: merge_3mf_colors.py is not available yet.")
     return maps
 
 

@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 import merge_3mf as merger
+from filament_report import format_filament_report
 
 
 def write_project(path, colors, mixed, components, ratios, label, plates=1):
@@ -146,6 +147,36 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(merger.remap_paint("0C8043", mapping), "1FFC801FC3")
         with self.assertRaisesRegex(ValueError, "Truncated"):
             merger.remap_paint("C", mapping)
+
+    def test_report_lists_only_base_slots_and_counts_distinct_mixes(self):
+        settings = {
+            "filament_colour": ["#000000", "#123456", "#0090DA", "#E24585", "#FFFFFF"],
+            "filament_is_mixed": ["0", "1", "0", "0", "0"],
+            "filament_mixed_components": ["", "1,3,3", "", "", ""],
+            "filament_type": ["PLA", "PLA", "PLA", "PLA", "PETG"],
+            "filament_vendor": ["Bambu Lab", "Bambu Lab", "Other", "Other", "", "",
+                                "Bambu Lab", "Bambu Lab", "", ""],
+        }
+        lines = format_filament_report(settings).splitlines()
+        self.assertEqual(lines[1], "Slot 1: black (#000000), PLA, Bambu Lab (used in 1 mixed filaments)")
+        self.assertEqual(lines[2], "Slot 3: blue/cyan (#0090DA), PLA, vendor unavailable (used in 1 mixed filaments)")
+        self.assertEqual(lines[3], "Slot 4: pink/magenta (#E24585), PLA, Bambu Lab (used in 0 mixed filaments)")
+        self.assertEqual(lines[4], "Slot 5: white (#FFFFFF), PETG, vendor unavailable (used in 0 mixed filaments)")
+        self.assertEqual(len(lines), 5)
+
+    def test_merge_prints_report_for_remapped_palette(self):
+        write_project(self.a, ["#000000", "#0090DA"], ["0", "0"], ["", ""], ["", ""], "A")
+        write_project(self.b, ["#FFFFFF", "#123456"], ["0", "1"], ["", "1,1"],
+                      ["", "0.5,0.5"], "B")
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            merger.merge(self.a, self.b, self.out)
+        text = output.getvalue()
+        self.assertIn("Slot 1: black (#000000), PLA, vendor unavailable (used in 0 mixed filaments)", text)
+        self.assertIn("Slot 3: white (#FFFFFF), PLA, vendor unavailable (used in 1 mixed filaments)", text)
+        self.assertNotIn("Slot 4:", text)
+        self.assertIn("Consider using merge_3mf_colors.py to merge colors for more efficient printing.", text)
+        self.assertIn("not available yet", text)
 
     def test_map_tails_and_optional_inheritance(self):
         a = {"printer_model": "printer", "filament_colour": ["A", "B"],

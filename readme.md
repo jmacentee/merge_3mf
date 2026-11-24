@@ -3,6 +3,7 @@
 `merge_3mf.py` merges two compatible Bambu Studio projects without guessing
 color roles or combining duplicate filaments. It requires Python 3.7 or later
 and uses only the standard library. It never launches Bambu Studio.
+Keep `filament_report.py` in the same folder as the merger.
 
 ## Usage
 
@@ -41,6 +42,13 @@ Support filaments are treated as ordinary/base filaments. Duplicate colors and
 profiles are deliberately retained, even across the two projects. The script
 uses `filament_is_mixed` to distinguish mixed slots, not their displayed color.
 Interleaved source palettes are also supported.
+
+After a merge, the filament report lists each output base slot, its approximate
+color name and stored color value, material, vendor, and the number of mixed
+filaments that use it. A mixed filament is counted once per base slot, even if
+its recipe references the same slot multiple times. Missing material or vendor
+information is identified as unavailable. Color names are approximations, not
+manufacturer color names. The planned `merge_3mf_colors.py` is not available yet.
 
 For the sample, the output has **9 base slots and 25 mixed slots**:
 
