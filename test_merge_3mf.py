@@ -176,7 +176,29 @@ class MergeTests(unittest.TestCase):
         self.assertIn("Slot 3: white (#FFFFFF), PLA, vendor unavailable (used in 1 mixed filaments)", text)
         self.assertNotIn("Slot 4:", text)
         self.assertIn("Consider using merge_3mf_colors.py to merge colors for more efficient printing.", text)
-        self.assertIn("not available yet", text)
+
+    def test_suggests_only_matching_base_slots_with_quoted_paths(self):
+        settings = {
+            "filament_colour": ["#0090da", "#0090DA", "#FFFFFF", "#0090DA", "#ffffff", "invalid"],
+            "filament_is_mixed": ["0", "0", "0", "1", "0", "0"],
+            "filament_mixed_components": ["", "", "", "1,3", "", ""],
+        }
+        text = format_filament_report(settings, Path("Bob's Project.3mf"))
+        self.assertIn("'Bob''s Project.3mf' 'Bob''s Project_merged_colors.3mf' '1,2;3,5'", text)
+        self.assertIn("unrecognized color values in base slots: 6", text)
+        self.assertIn("Matching colors do not guarantee compatible materials or settings.", text)
+        settings["filament_colour"][1] = "#000000"
+        settings["filament_colour"][4] = "#AAAAAA"
+        self.assertIn("No identical base filament colors found.", format_filament_report(settings, "input.3mf"))
+
+    def test_merge_suggests_using_created_output(self):
+        for path, label in ((self.a, "A"), (self.b, "B")):
+            write_project(path, ["#FFFFFF", "#000000"], ["0", "0"], ["", ""], ["", ""], label)
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            merger.merge(self.a, self.b, self.out)
+        self.assertIn("'%s' '%s' '1,3;2,4'" %
+                      (self.out, self.base / "output_merged_colors.3mf"), stdout.getvalue())
 
     def test_map_tails_and_optional_inheritance(self):
         a = {"printer_model": "printer", "filament_colour": ["A", "B"],

@@ -230,6 +230,19 @@ def remap_paint(encoded, mapping):
     return "".join(format(n, "X") for n in reversed(out))
 
 
+def remap_model_paint(data, mapping, name):
+    def replace(match):
+        return b'paint_color="' + remap_paint(
+            match.group(1).decode("ascii").upper(), mapping).encode("ascii") + b'"'
+
+    updated = PAINT.sub(replace, data)
+    original_meshes = re.findall(rb"<mesh\b[^>]*>.*?</mesh>", data, re.DOTALL)
+    new_meshes = re.findall(rb"<mesh\b[^>]*>.*?</mesh>", updated, re.DOTALL)
+    require([PAINT.sub(replace, mesh) for mesh in original_meshes] == new_meshes,
+            "Geometry or paint changed unexpectedly: " + name)
+    return updated
+
+
 class Project:
     def __init__(self, path):
         self.path = Path(path)
@@ -338,15 +351,7 @@ class Project:
                 updated = updated.replace(b"/>", b' p:path="' + attrs["{%s}path" % PROD].encode() + b'"/>')
             return updated
         data = re.sub(pattern, replace_tag, data)
-        data = PAINT.sub(lambda match: b'paint_color="' + remap_paint(
-            match.group(1).decode("ascii").upper(), mapping).encode("ascii") + b'"', data)
-        original_meshes = re.findall(rb"<mesh\b[^>]*>.*?</mesh>", self.files[name], re.DOTALL)
-        new_meshes = re.findall(rb"<mesh\b[^>]*>.*?</mesh>", data, re.DOTALL)
-        expected_meshes = [PAINT.sub(lambda match: b'paint_color="' + remap_paint(
-            match.group(1).decode("ascii").upper(), mapping).encode("ascii") + b'"', mesh)
-            for mesh in original_meshes]
-        require(expected_meshes == new_meshes, "Geometry or paint changed unexpectedly: " + name)
-        return data
+        return remap_model_paint(data, mapping, name)
 
     def rewrite_metadata(self, mapping, combined_settings):
         for obj in self.metadata.findall("object"):
@@ -517,7 +522,7 @@ def merge(input_a, input_b, output):
     require(not output.exists(), "Output already exists; choose a new filename")
     projects = [Project(input_a), Project(input_b)]
     settings, maps, order = merge_palettes(*(p.settings for p in projects))
-    report = format_filament_report(settings)
+    report = format_filament_report(settings, output)
     next_id = 1
     for source, project in enumerate(projects):
         next_id = project.prepare(source, next_id, projects[0].files)
@@ -601,7 +606,6 @@ def merge(input_a, input_b, output):
     print("New cross-project purge transitions use 280; recalculate purging volumes in Bambu Studio.")
     print(report)
     print("Consider using merge_3mf_colors.py to merge colors for more efficient printing.")
-    print("Note: merge_3mf_colors.py is not available yet.")
     return maps
 
 

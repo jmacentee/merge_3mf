@@ -12,6 +12,9 @@
 @font-face
 	{font-family:Aptos;
 	panose-1:2 11 0 4 2 2 2 2 2 4;}
+@font-face
+	{font-family:"Aptos Display";
+	panose-1:2 11 0 4 2 2 2 2 2 4;}
  /* Style Definitions */
  p.MsoNormal, li.MsoNormal, div.MsoNormal
 	{margin-top:0in;
@@ -21,9 +24,47 @@
 	line-height:115%;
 	font-size:12.0pt;
 	font-family:"Aptos",sans-serif;}
+p.MsoTitle, li.MsoTitle, div.MsoTitle
+	{mso-style-link:"Title Char";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:4.0pt;
+	margin-left:0in;
+	font-size:28.0pt;
+	font-family:"Aptos Display",sans-serif;
+	letter-spacing:-.5pt;}
+p.MsoTitleCxSpFirst, li.MsoTitleCxSpFirst, div.MsoTitleCxSpFirst
+	{mso-style-link:"Title Char";
+	margin:0in;
+	font-size:28.0pt;
+	font-family:"Aptos Display",sans-serif;
+	letter-spacing:-.5pt;}
+p.MsoTitleCxSpMiddle, li.MsoTitleCxSpMiddle, div.MsoTitleCxSpMiddle
+	{mso-style-link:"Title Char";
+	margin:0in;
+	font-size:28.0pt;
+	font-family:"Aptos Display",sans-serif;
+	letter-spacing:-.5pt;}
+p.MsoTitleCxSpLast, li.MsoTitleCxSpLast, div.MsoTitleCxSpLast
+	{mso-style-link:"Title Char";
+	margin-top:0in;
+	margin-right:0in;
+	margin-bottom:4.0pt;
+	margin-left:0in;
+	font-size:28.0pt;
+	font-family:"Aptos Display",sans-serif;
+	letter-spacing:-.5pt;}
 a:link, span.MsoHyperlink
 	{color:#467886;
 	text-decoration:underline;}
+span.TitleChar
+	{mso-style-name:"Title Char";
+	mso-style-link:Title;
+	font-family:"Aptos Display",sans-serif;
+	letter-spacing:-.5pt;}
+.MsoChpDefault
+	{font-size:12.0pt;
+	font-family:"Aptos",sans-serif;}
 .MsoPapDefault
 	{margin-bottom:8.0pt;
 	line-height:115%;}
@@ -41,7 +82,11 @@ div.WordSection1
 
 <div class=WordSection1>
 
-<p class=MsoNormal>I had a problem.ï¿½ I my new Bambu Labs H3C, I wanted to print
+<p class=MsoTitle>Merge 3MF</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>I had a problem.  I my new Bambu Labs H3C, I wanted to print
 both of these models at the same time.</p>
 
 <p class=MsoNormal>&nbsp;</p>
@@ -63,8 +108,8 @@ src="Why_I_Made_3mf_Merge_files/image002.png"></p>
 <p class=MsoNormal>&nbsp;</p>
 
 <p class=MsoNormal>Because printing them at the same time would save 4 hours of
-print time and 30 grams of filament. (I scaled the factory down to the same size
-as the hedgehog.)</p>
+print time and 30 grams of filament. (I scaled the factory down to the same
+size as the hedgehog.)</p>
 
 <p class=MsoNormal>The trouble was, any time I tried to combine them in Bambu
 Studio, the colors of one or both would get messed up.</p>
@@ -86,17 +131,17 @@ src="Why_I_Made_3mf_Merge_files/image005.png"></p>
 
 <p class=MsoNormal>&nbsp;</p>
 
-<p class=MsoNormal>Even after correcting both into CMYKW order and resolving each
-set of Mixed Filaments, the merging didnï¿½t go well.</p>
+<p class=MsoNormal>Even after correcting both into CMYKW order and resolving
+each set of Mixed Filaments, the merging didn’t go well.</p>
 
 <p class=MsoNormal><img border=0 width=624 height=212
 src="Why_I_Made_3mf_Merge_files/image006.jpg"></p>
 
-<p class=MsoNormal>With the help of Github Copilot, I created the merge_3mf.py python
-script to read the color indexes in each file and keep them from conflicting
-into a new output file.</p>
+<p class=MsoNormal>With the help of Github Copilot, I created the merge_3mf.py
+python script to read the color indexes in each file and keep them from
+conflicting into a new output file.</p>
 
-<p class=MsoNormal>So far, Iï¿½ve only tested it on these two models. Use at your
+<p class=MsoNormal>So far, I’ve only tested it on these two models. Use at your
 own risk.</p>
 
 <p class=MsoNormal><img border=0 width=624 height=192 id="Picture 1"
@@ -106,6 +151,41 @@ src="Why_I_Made_3mf_Merge_files/image007.jpg"></p>
 
 <p class=MsoNormal>See the readme.md file for more information and
 instructions.</p>
+
+<p class=MsoTitle>merge_3mf_colors</p>
+
+<p class=MsoNormal>I encountered a 2<sup>nd</sup> problem.  Look what happened
+when I merged</p>
+
+<p class=MsoNormal><a
+href="https://makerworld.com/en/models/3636508-h3c-h2c-cmyk-gecko-color-gradient#profileId-4170693">H3C
+H2C CMYK Gecko Color Gradient - Free 3D Print Model - MakerWorld</a></p>
+
+<p class=MsoNormal>and</p>
+
+<p class=MsoNormal><a
+href="https://makerworld.com/en/models/3639140-h3c-h2c-cmyk-frosch-frog-gradient#profileId-4173877">H3C
+H2C CMYK Frosch Frog Gradient - Free 3D Print Model - MakerWorld</a></p>
+
+<p class=MsoNormal><img border=0 width=371 height=669 id="Picture 2"
+src="Why_I_Made_3mf_Merge_files/image008.png"></p>
+
+<p class=MsoNormal>The slicer doesn’t understand that 1 &amp; 7, 3 &amp; 9,
+etc. are all the same thing, even though they are all mapped from project filaments
+to the same slots in my AMS.</p>
+
+<p class=MsoNormal>&nbsp;</p>
+
+<p class=MsoNormal>I had to manually merge each pair or duplicate colors and
+then manually fix each mixed filament that contained that color.</p>
+
+<p class=MsoNormal>merge_3mf_colors.py does this for you automatically.</p>
+
+<p class=MsoNormal>Watch the time and waste go down as I combine the number of
+virtual filaments used:</p>
+
+<p class=MsoNormal><img border=0 width=619 height=328 id="Picture 3"
+src="Why_I_Made_3mf_Merge_files/image009.png"></p>
 
 <p class=MsoNormal>&nbsp;</p>
 

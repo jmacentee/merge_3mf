@@ -2,10 +2,15 @@
 
 import colorsys
 import re
+from pathlib import Path
+
+
+def valid_color(color):
+    return isinstance(color, str) and re.fullmatch(r"#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?", color)
 
 
 def color_name(color):
-    if not isinstance(color, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?", color):
+    if not valid_color(color):
         return "unrecognized color"
     red, green, blue = (int(color[i:i + 2], 16) / 255 for i in (1, 3, 5))
     hue, saturation, value = colorsys.rgb_to_hsv(red, green, blue)
@@ -40,7 +45,7 @@ def slot_values(settings, key, count, label):
     return result
 
 
-def format_filament_report(settings):
+def format_filament_report(settings, project_path=None):
     """Return a report for a palette whose recipes have already been validated."""
     colors = settings["filament_colour"]
     count = len(colors)
@@ -58,4 +63,30 @@ def format_filament_report(settings):
         if str(flags[i]) == "0":
             lines.append("Slot %d: %s (%s), %s, %s (used in %d mixed filaments)" % (
                 i + 1, color_name(color), color, materials[i], vendors[i], usages[i]))
+    if project_path is not None:
+        groups, unknown = {}, []
+        for i, color in enumerate(colors):
+            if str(flags[i]) != "0":
+                continue
+            if valid_color(color):
+                groups.setdefault(color.upper(), []).append(i + 1)
+            else:
+                unknown.append(i + 1)
+        duplicates = [group for group in groups.values() if len(group) > 1]
+        if unknown:
+            lines.append("Cannot compare unrecognized color values in base slots: %s." %
+                         ", ".join(str(slot) for slot in unknown))
+        if duplicates:
+            path = Path(project_path)
+            output = path.with_name(path.stem + "_merged_colors" + path.suffix)
+            sets = ";".join(",".join(str(slot) for slot in group) for group in duplicates)
+            def quote(value):
+                return "'" + str(value).replace("'", "''") + "'"
+            script = Path(__file__).resolve().with_name("merge_3mf_colors.py")
+            lines.append("Suggested PowerShell command (review materials and settings first):")
+            lines.append("python -B %s %s %s %s" %
+                         (quote(script), quote(path), quote(output), quote(sets)))
+            lines.append("Matching colors do not guarantee compatible materials or settings.")
+        else:
+            lines.append("No identical base filament colors found.")
     return "\n".join(lines)

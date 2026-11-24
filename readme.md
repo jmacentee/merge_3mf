@@ -48,7 +48,51 @@ color name and stored color value, material, vendor, and the number of mixed
 filaments that use it. A mixed filament is counted once per base slot, even if
 its recipe references the same slot multiple times. Missing material or vendor
 information is identified as unavailable. Color names are approximations, not
-manufacturer color names. The planned `merge_3mf_colors.py` is not available yet.
+manufacturer color names.
+
+The report also suggests a PowerShell command for `merge_3mf_colors.py`, using
+sets of base slots with identical stored color values and an output filename
+ending in `_merged_colors`. Review the suggestion before running it: identical
+colors do not guarantee matching materials, profiles, or physical spools.
+Mixed slots are not included in suggested sets; unrecognized color values are
+reported and excluded. No file is changed by the suggestion itself.
+
+## Merge duplicate base filaments
+
+Use `merge_3mf_colors.py` to merge chosen base slots in one existing project.
+Keep `merge_3mf.py` and `filament_report.py` in the same folder as this script.
+First display the original slot numbers:
+
+```powershell
+python -B .\merge_3mf_colors.py .\FOM_All3.3mf
+```
+
+Specifying an output filename without slot sets also only displays the report;
+the output file is not created or modified. To merge slots, quote the sets in
+PowerShell: commas separate slots within a set, and semicolons separate sets.
+
+```powershell
+python -B .\merge_3mf_colors.py .\FOM_All3.3mf .\FOM_merged_colors.3mf `
+  "1,6,11;2,7,12;3,8,13;4,9,14;5,10,15"
+```
+
+Every number refers to the **original input** slot, not the renumbered result.
+Each set needs at least two distinct base slots; mixed slots and repeated or
+unknown slot numbers are rejected. The first slot listed in each set supplies
+the retained filament settings. Its merged slot occupies the earliest original
+position in that set, and the remaining slots are renumbered. Differences in
+settings or plate mappings are reported as warnings. No colors are automatically
+selected or merged.
+
+The script updates paint, object/part and process filament selectors, plate
+maps, and mixed recipes. Duplicate ingredients in a mixed recipe have their
+ratios combined; if only one ingredient remains, references to that mixed
+slot are changed to the base slot and the mixed slot is removed. Combining
+ingredients may change sublayer ordering or the printed appearance. Other
+mixed filaments remain separate. The script prints the original-to-new slot
+mapping, discards cached slice data, and will not overwrite an existing file.
+Review the retained settings, mixed recipes and purging volumes in Bambu Studio
+and inspect the slice preview before printing.
 
 For the sample, the output has **9 base slots and 25 mixed slots**:
 
@@ -121,7 +165,7 @@ object IDs, and model/part/paint reference resolution.
 Run the focused Python tests with:
 
 ```powershell
-python -B -m unittest test_merge_3mf -v
+python -B -m unittest test_merge_3mf test_merge_3mf_colors -v
 ```
 
 **You do all slicer and printing tests.** Open the output as a project in Bambu
@@ -133,4 +177,4 @@ the preview before printing.
 - Bambu Slicer is not smart enough (yet, November 2026) to treat two project filaments that are both mapped to the same AMS spool as 
 a single filament.  I combined two projects and got two each of CMYK and 1st slice was 17h19m, 2477 filament changes, 121g purge tower.
 Manually merging the duplicate filaments one-by-one and then correcting the virtual mixed filaments reduced the same project with no other
-changes to 14h35m, 1497 filament changes, 72g purge tower. 
+changes to 14h35m, 1497 filament changes, 72g purge tower. I added merge_3mf_colors.py to address this problem.
