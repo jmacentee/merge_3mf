@@ -141,6 +141,41 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(settings["filament_is_mixed"], ["0"] * 3)
         self.assertEqual(len(metadata.findall("plate")), 2)
 
+    def test_short_default_mixed_arrays_are_expanded(self):
+        write_project(self.a, ["#FFFFFF", "#000000", "#FF0000"], ["0"] * 3,
+                      [""] * 3, [""] * 3, "A")
+        write_project(self.b, ["#FFFFFF", "#000000"], ["0"] * 2,
+                      [""] * 2, [""] * 2, "B")
+        with zipfile.ZipFile(self.a) as archive:
+            settings = json.loads(archive.read(merger.SETTINGS))
+        for key in ("filament_is_mixed", "filament_mixed_components", "filament_mixed_sublayer_ratios"):
+            settings[key] = settings[key][:1]
+        settings["filament_mixed_gradient"] = ["0"]
+        settings["filament_mixed_gradient_curve"] = [""]
+        update_project(self.a, {merger.SETTINGS: json.dumps(settings)})
+        with zipfile.ZipFile(self.b) as archive:
+            other = json.loads(archive.read(merger.SETTINGS))
+        other["filament_mixed_gradient"] = ["0", "0"]
+        other["filament_mixed_gradient_curve"] = ["", ""]
+        update_project(self.b, {merger.SETTINGS: json.dumps(other)})
+        self.merge()
+        with zipfile.ZipFile(self.out) as archive:
+            result = json.loads(archive.read(merger.SETTINGS))
+        self.assertEqual(result["filament_is_mixed"], ["0"] * 5)
+        self.assertEqual(result["filament_mixed_components"], [""] * 5)
+        self.assertEqual(result["filament_mixed_gradient"], ["0"] * 5)
+
+    def test_short_nondefault_mixed_arrays_are_rejected(self):
+        settings = {"filament_colour": ["A", "B", "C"], "filament_is_mixed": ["0", "1"],
+                    "filament_mixed_components": ["", "1,3", ""],
+                    "filament_mixed_sublayer_ratios": ["", "0.5,0.5", ""]}
+        with self.assertRaisesRegex(ValueError, "filament_is_mixed"):
+            merger.palette(settings)
+        settings["filament_is_mixed"] = ["0", "1", "0"]
+        settings["filament_mixed_components"] = ["", "1,3"]
+        with self.assertRaisesRegex(ValueError, "recipe arrays"):
+            merger.palette(settings)
+
     def test_split_tree_and_extended_states(self):
         # Four leaves, read right-to-left: slot 1, unpainted, slot 2, slot 3.
         mapping = tuple([0, 19, 2, 34] + list(range(4, 35)))

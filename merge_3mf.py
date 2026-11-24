@@ -64,10 +64,32 @@ def selector(value, mapping, context):
     return str(mapping[number])
 
 
-def palette(settings):
+def normalize_mixed_settings(settings):
     colors = settings.get("filament_colour")
     require(isinstance(colors, list) and colors, "Missing filament_colour palette")
     count = len(colors)
+    defaults = {
+        "filament_is_mixed": "0", "filament_mixed_components": "",
+        "filament_mixed_sublayer_ratios": "", "filament_mixed_gradient": "0",
+        "filament_mixed_gradient_curve": "", "filament_mixed_gradient_per_part": "0",
+        "filament_mixed_gradient_range": "",
+    }
+    result = copy.deepcopy(settings)
+    flags = result.get("filament_is_mixed", [])
+    require(isinstance(flags, list), "Invalid mixed-filament array: filament_is_mixed")
+    default_only = len(flags) <= count and all(str(value) == "0" for value in flags)
+    for key, default in defaults.items():
+        if key in result:
+            values = result[key]
+            require(isinstance(values, list), "Invalid mixed-filament array: " + key)
+            if default_only and len(values) < count and all(value == default for value in values):
+                result[key] = values + [default] * (count - len(values))
+    return result
+
+
+def palette(settings):
+    settings = normalize_mixed_settings(settings)
+    count = len(settings["filament_colour"])
     flags = settings.get("filament_is_mixed", ["0"] * count)
     require(len(flags) == count and all(str(x) in ("0", "1") for x in flags),
             "Invalid filament_is_mixed flags")
@@ -95,6 +117,7 @@ def palette(settings):
 
 
 def merge_palettes(a, b):
+    a, b = normalize_mixed_settings(a), normalize_mixed_settings(b)
     require(a.get("printer_model") and b.get("printer_model"),
             "Both projects must identify their printer model")
     for key in PRINTER_KEYS:
@@ -230,7 +253,7 @@ class Project:
                 "Layer-specific G-code/settings are not supported; remove them in a copy first")
         require(ROOT_MODEL in self.files and SETTINGS in self.files and MODEL_SETTINGS in self.files,
                 "Input must be a Bambu Studio project, not a mesh-only or sliced-only 3MF")
-        self.settings = json.loads(self.files[SETTINGS].decode("utf-8-sig"))
+        self.settings = normalize_mixed_settings(json.loads(self.files[SETTINGS].decode("utf-8-sig")))
         self.models = {n: ET.fromstring(data) for n, data in self.files.items() if n.endswith(".model")}
         self.metadata = ET.fromstring(self.files[MODEL_SETTINGS])
         self.ids = {}

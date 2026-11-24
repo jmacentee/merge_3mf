@@ -42,6 +42,9 @@ Support filaments are treated as ordinary/base filaments. Duplicate colors and
 profiles are deliberately retained, even across the two projects. The script
 uses `filament_is_mixed` to distinguish mixed slots, not their displayed color.
 Interleaved source palettes are also supported.
+Projects with no mixed filaments may store shortened default mixed-setting
+arrays; the scripts expand these defaults to match the palette. Non-default
+incomplete mixed settings are rejected rather than guessed.
 
 After a merge, the filament report lists each output base slot, its approximate
 color name and stored color value, material, vendor, and the number of mixed

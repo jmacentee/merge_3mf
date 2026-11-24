@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 
 from filament_report import format_filament_report, identical_mixed_groups
-from merge_3mf import MODEL_SETTINGS, SETTINGS, Project, palette, require, selector
+from merge_3mf import MODEL_SETTINGS, SETTINGS, Project, normalize_mixed_settings, palette, require, selector
 from merge_3mf_colors import select_settings, write_project
 
 
@@ -42,7 +42,7 @@ def main():
     try:
         if args.output is None:
             with zipfile.ZipFile(args.input) as archive:
-                settings = json.loads(archive.read(SETTINGS).decode("utf-8-sig"))
+                settings = normalize_mixed_settings(json.loads(archive.read(SETTINGS).decode("utf-8-sig")))
                 metadata = ET.fromstring(archive.read(MODEL_SETTINGS))
             palette(settings)
             print(format_filament_report(settings, args.input, metadata))

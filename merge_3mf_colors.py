@@ -19,7 +19,7 @@ from urllib.parse import unquote, urlsplit
 
 from filament_report import format_filament_report
 from merge_3mf import (MODEL_SETTINGS, PAINT, SELECTORS, SETTINGS, SLOT_KEYS, Project,
-                       palette, remap_model_paint, remap_paint, require, selector, xml_bytes)
+                       normalize_mixed_settings, palette, remap_model_paint, remap_paint, require, selector, xml_bytes)
 
 
 def parse_sets(text, base_slots):
@@ -251,7 +251,7 @@ def main():
     try:
         if args.sets is None:
             with zipfile.ZipFile(args.input) as archive:
-                settings = json.loads(archive.read(SETTINGS).decode("utf-8-sig"))
+                settings = normalize_mixed_settings(json.loads(archive.read(SETTINGS).decode("utf-8-sig")))
                 metadata = ET.fromstring(archive.read(MODEL_SETTINGS))
             palette(settings)
             print(format_filament_report(settings, args.input, metadata))
