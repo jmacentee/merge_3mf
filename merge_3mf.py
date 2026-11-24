@@ -146,13 +146,10 @@ def merge_palettes(a, b):
         values = [c.get(key) for c in configs]
         require(all(isinstance(v, list) for v in values),
                 "Both inputs need compatible per-filament setting: " + key)
-        tails = [[], []]
         if key in ("filament_volume_map", "filament_nozzle_map"):
             for source in range(2):
                 require(len(values[source]) >= counts[source], "Short filament map: " + key)
-                tails[source] = values[source][counts[source]:]
                 values[source] = values[source][:counts[source]]
-            require(tails[0] == tails[1], "Incompatible trailing defaults in " + key)
         widths = [len(v) // n for v, n in zip(values, counts)]
         require(all(len(v) % n == 0 for v, n in zip(values, counts)) and
                 widths[0] == widths[1] and widths[0] > 0,
@@ -164,7 +161,6 @@ def merge_palettes(a, b):
             if key == "filament_self_index":
                 chunk = [str(maps[source][old + 1])] * width
             result[key].extend(chunk)
-        result[key].extend(tails[0])
     result["filament_is_mixed"] = ["0"] * (len(bases_a) + len(bases_b)) + ["1"] * (
         len(mixes_a) + len(mixes_b))
     result["filament_mixed_components"] = []
@@ -180,10 +176,10 @@ def merge_palettes(a, b):
             result[key] = selector(result[key], maps[0], key)
     for key in ("different_settings_to_system", "inherits_group"):
         if key in a or key in b:
-            values = [c.get(key) for c in configs]
+            values = [c.get(key, [""] * (n + 2)) for c, n in zip(configs, counts)]
             require(all(isinstance(v, list) and len(v) == n + 2 for v, n in zip(values, counts)),
                     "Unsupported inheritance metadata: " + key)
-            result[key] = values[0][:2] + [values[s][i + 2] for s, i in order]
+            result[key] = [values[0][0]] + [values[s][i + 1] for s, i in order] + [values[0][-1]]
     if "flush_volumes_matrix" in a or "flush_volumes_matrix" in b:
         matrices = [c.get("flush_volumes_matrix") for c in configs]
         require(all(isinstance(v, list) and len(v) == n * n for v, n in zip(matrices, counts)),
@@ -390,10 +386,15 @@ class Project:
                         node.set("value", self.names[value])
                 elif key in ("filament_maps", "filament_volume_maps"):
                     old = node.get("value").split()
-                    require(len(old) == len(mapping) - 1, "Invalid plate filament mapping")
                     setting = "filament_map" if key == "filament_maps" else "filament_volume_map"
                     values = list(combined_settings[setting][:len(combined_settings["filament_colour"])])
-                    for slot, value in enumerate(old, 1):
+                    count = len(mapping) - 1
+                    if old and len(old) != count:
+                        action = ("missing entries use the project's global map" if len(old) < count
+                                  else "extra entries are ignored")
+                        print("Warning: %s has %d %s entries for %d filaments; %s." %
+                              (self.path, len(old), key, count, action), file=sys.stderr)
+                    for slot, value in enumerate(old[:count], 1):
                         values[mapping[slot] - 1] = value
                     node.set("value", " ".join(values))
             elif node.tag == "assemble_item":
@@ -542,20 +543,28 @@ def merge(input_a, input_b, output):
     files[SETTINGS] = json.dumps(settings, ensure_ascii=False, indent=2).encode("utf-8")
     files[MODEL_SETTINGS] = combine_metadata(projects, maps)
     cuts = ET.Element("objects")
+    object_offset = 0
     for project in projects:
+        build = project.models[ROOT_MODEL].find("{%s}build" % CORE)
+        object_order = []
+        for item in build.findall("{%s}item" % CORE):
+            key = project.target(ROOT_MODEL, item)
+            if key not in object_order:
+                object_order.append(key)
         if "Metadata/cut_information.xml" in project.files:
             cut = ET.fromstring(project.files["Metadata/cut_information.xml"])
+            seen = set()
             for obj in cut:
                 require(all(int(c.get("connectors_cnt", "0")) == 0 for c in obj.findall("cut_id")),
                         "Models with cut connectors are not supported")
-                old = obj.get("id")
-                candidates = [key for key in project.ids if key[1] == old and
-                              project.models[key[0]].find(
-                                  "./{%s}resources/{%s}object[@id='%s']/{%s}mesh" % (
-                                      CORE, CORE, old, CORE)) is not None]
-                require(len(candidates) == 1, "Ambiguous cut-information object reference")
-                obj.set("id", project.ids[candidates[0]])
+                require(obj.tag == "object", "Unsupported cut-information element")
+                index = int(obj.get("id", "0"))
+                require(1 <= index <= len(object_order) and index not in seen,
+                        "Invalid cut-information object index in %s: %s" % (project.path, obj.get("id")))
+                seen.add(index)
+                obj.set("id", str(object_offset + index))
                 cuts.append(obj)
+        object_offset += len(object_order)
     files["Metadata/cut_information.xml"] = xml_bytes(cuts)
     submodels = [name for name in files if name.endswith(".model") and name != ROOT_MODEL]
     files["3D/_rels/3dmodel.model.rels"] = relationships(submodels)

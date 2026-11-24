@@ -61,6 +61,15 @@ def write_project(path, colors, mixed, components, ratios, label, plates=1):
                          '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>')
 
 
+def update_project(path, changes):
+    with zipfile.ZipFile(path) as archive:
+        entries = {name: archive.read(name) for name in archive.namelist()}
+    entries.update(changes)
+    with zipfile.ZipFile(path, "w") as archive:
+        for name, data in entries.items():
+            archive.writestr(name, data)
+
+
 class MergeTests(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
@@ -137,6 +146,60 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(merger.remap_paint("0C8043", mapping), "1FFC801FC3")
         with self.assertRaisesRegex(ValueError, "Truncated"):
             merger.remap_paint("C", mapping)
+
+    def test_map_tails_and_optional_inheritance(self):
+        a = {"printer_model": "printer", "filament_colour": ["A", "B"],
+             "filament_nozzle_map": ["3", "4", "0", "7"],
+             "filament_volume_map": ["1", "2"],
+             "inherits_group": ["A-process", "A1", "A2", "A-printer"]}
+        b = {"printer_model": "printer", "filament_colour": ["C"],
+             "filament_nozzle_map": ["5"],
+             "filament_volume_map": ["3", "0", "0"],
+             "different_settings_to_system": ["B-process", "B1", "B-printer"]}
+        merged, _, _ = merger.merge_palettes(a, b)
+        self.assertEqual(merged["filament_nozzle_map"], ["3", "4", "5"])
+        self.assertEqual(merged["filament_volume_map"], ["1", "2", "3"])
+        self.assertEqual(merged["inherits_group"], ["A-process", "A1", "A2", "", "A-printer"])
+        self.assertEqual(merged["different_settings_to_system"], ["", "", "", "B1", ""])
+
+    def test_cut_indices_survive_repeated_merges(self):
+        for path, label in ((self.a, "A"), (self.b, "B")):
+            write_project(path, ["R", "G"], ["0", "0"], ["", ""], ["", ""], label)
+            update_project(path, {"Metadata/cut_information.xml":
+                b'<objects><object id="1"><cut_id id="0" check_sum="1" connectors_cnt="0"/></object></objects>'})
+        self.merge()
+        second = self.base / "three.3mf"
+        with contextlib.redirect_stdout(io.StringIO()):
+            merger.merge(self.out, self.a, second)
+        with zipfile.ZipFile(second) as archive:
+            cut = ET.fromstring(archive.read("Metadata/cut_information.xml"))
+        self.assertEqual([obj.get("id") for obj in cut], ["1", "2", "3"])
+
+    def test_short_plate_map_uses_source_global_values_with_warning(self):
+        for path, label in ((self.a, "A"), (self.b, "B")):
+            write_project(path, ["R", "G"], ["0", "0"], ["", ""], ["", ""], label)
+        with zipfile.ZipFile(self.a) as archive:
+            settings = json.loads(archive.read(merger.SETTINGS))
+            metadata = ET.fromstring(archive.read(merger.MODEL_SETTINGS))
+        settings["filament_volume_map"] = ["2", "3"]
+        metadata.find("./plate/metadata[@key='filament_volume_maps']").set("value", "1")
+        update_project(self.a, {merger.SETTINGS: json.dumps(settings), merger.MODEL_SETTINGS: ET.tostring(metadata)})
+        warnings = io.StringIO()
+        with contextlib.redirect_stderr(warnings):
+            self.merge()
+        self.assertIn("missing entries use the project's global map", warnings.getvalue())
+        with zipfile.ZipFile(self.out) as archive:
+            metadata = ET.fromstring(archive.read(merger.MODEL_SETTINGS))
+        self.assertEqual(metadata.find("./plate/metadata[@key='filament_volume_maps']").get("value"), "1 3 0 0")
+
+    def test_invalid_cut_index_is_rejected(self):
+        for path, label in ((self.a, "A"), (self.b, "B")):
+            write_project(path, ["R", "G"], ["0", "0"], ["", ""], ["", ""], label)
+        update_project(self.a, {"Metadata/cut_information.xml":
+            b'<objects><object id="2"><cut_id id="0" check_sum="1" connectors_cnt="0"/></object></objects>'})
+        with self.assertRaisesRegex(ValueError, "Invalid cut-information object index"):
+            self.merge()
+        self.assertFalse(self.out.exists())
 
     def test_rejects_invalid_inputs_without_creating_output(self):
         write_project(self.a, ["R", "G"], ["0", "0"], ["", ""], ["", ""], "A")

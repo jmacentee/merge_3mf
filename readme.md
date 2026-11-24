@@ -77,6 +77,9 @@ remapped as well. No manual repainting should be needed.
   convert projects between printers.
 - Per-filament profiles/settings are reordered with their palette entries.
   Both inputs must have compatible per-filament array layouts.
+- Extra entries beyond the palette in global nozzle/volume maps are discarded.
+  If a plate map has too few entries, the script warns and fills the missing
+  slots from that project's global map; review the mapping in Bambu Studio.
 - Existing within-project purge-volume entries are retained. Newly introduced
   cross-project transitions use **280** as a placeholder. **Recalculate
   purging volumes for the actual printer and filaments before printing.**
